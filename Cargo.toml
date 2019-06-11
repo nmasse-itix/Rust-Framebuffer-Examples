@@ -1,0 +1,7 @@
+[package]
+name = "hello_fb"
+version = "0.1.0"
+authors = ["Nicolas Massé <nicolas.masse@itix.fr>"]
+
+[dependencies]
+minifb = "*"
