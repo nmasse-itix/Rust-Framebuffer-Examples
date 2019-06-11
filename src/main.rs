@@ -8,7 +8,7 @@ const HEIGHT: usize = 100;
 fn hsl_to_rgb(h: i32, s: f64, l: f64) -> u32 {
     //println!("h: {}, s: {}, l: {}", h, s, l);
     let c: f64 = (1.0 - (2.0 * l - 1.0).abs()) * s;
-    let x: f64 = c * (1.0 - ((h as f64 / 60.0) % 2.0 - 1.0).abs()) as f64;
+    let x: f64 = c * (1.0 - ((h as f64 / 60.0) % 2.0 - 1.0).abs());
     let m: f64 = l - c / 2.0;
     //println!("c: {}, x: {}, m: {}", c, x, m);
     let (rp, gp, bp) = match h {
@@ -24,7 +24,7 @@ fn hsl_to_rgb(h: i32, s: f64, l: f64) -> u32 {
     let (r, g, b) = ((rp + m) * 255.0, (gp + m) * 255.0, (bp + m) * 255.0);
     //println!("r: {}, g: {}, b: {}", r, g, b);
 
-    b as u32 + ((g as u32) << 8) + ((r as u32) << 16)
+    b.round() as u32 + ((g.round() as u32) << 8) + ((r.round() as u32) << 16)
 }
 
 fn main() {
@@ -40,13 +40,10 @@ fn main() {
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let s: f64 = 1.0;
         
-        let mut count: i32 = 0;
-        for i in buffer.iter_mut() {
-            let h: i32 = count % 360;
-            let l: f64 = count as f64 / 36000.0; // see http://carols10cents.github.io/rust-conversion-reference/
-
-            *i = hsl_to_rgb(h, s, l);
-            count += 1;
+        for h in 0..WIDTH {
+            for l in 0..HEIGHT {
+                buffer[h + l * WIDTH] = hsl_to_rgb(h as i32, s, l as f64 / 100.0);
+            }
         }
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
@@ -66,84 +63,89 @@ mod tests {
     // Note this useful idiom: importing names from outer (for mod tests) scope.
     use super::*;
 
+    fn test_hsl_to_rgb(h: i32, s: f64, l: f64, expected: u32, name: &str) {
+        let computed = hsl_to_rgb(h, s, l);
+        assert_eq!(computed, expected, "HSL to RGB conversion failed: {}. Got {:06X}, expected {:06X}", name, computed, expected);
+    }
+
     // Test cases from https://www.rapidtables.com/convert/color/hsl-to-rgb.html
     #[test]
     fn test_hsl_to_rgb_black() {
-        assert_eq!(hsl_to_rgb(0,   0.0, 0.0),  0x000000);  // Black
+        test_hsl_to_rgb(0, 0.0, 0.0, 0x000000, "Black");
     }
 
     #[test]
     fn test_hsl_to_rgb_white() {
-        assert_eq!(hsl_to_rgb(0,   0.0, 1.0),  0xFFFFFF);  // White
+        test_hsl_to_rgb(0, 0.0, 1.0, 0xFFFFFF, "White");
     }
 
     #[test]
     fn test_hsl_to_rgb_red() {
-        assert_eq!(hsl_to_rgb(0,   1.0, 0.5),  0xFF0000);  // Red
+        test_hsl_to_rgb(0, 1.0, 0.5, 0xFF0000, "Red");
     }
 
     #[test]
     fn test_hsl_to_rgb_lime() {
-        assert_eq!(hsl_to_rgb(120, 1.0, 0.5),  0x00FF00);  // Lime
+        test_hsl_to_rgb(120, 1.0, 0.5, 0x00FF00, "Lime");
     }
 
     #[test]
     fn test_hsl_to_rgb_blue() {
-        assert_eq!(hsl_to_rgb(240, 1.0, 0.5),  0x0000FF);  // Blue
+        test_hsl_to_rgb(240, 1.0, 0.5, 0x0000FF, "Blue");
     }
 
     #[test]
     fn test_hsl_to_rgb_yellow() {
-        assert_eq!(hsl_to_rgb(60,  1.0, 0.5),  0xFFFF00);  // Yellow
+        test_hsl_to_rgb(60, 1.0, 0.5, 0xFFFF00, "Yellow");
     }
 
     #[test]
     fn test_hsl_to_rgb_cyan() {
-        assert_eq!(hsl_to_rgb(180, 1.0, 0.5),  0x00FFFF);  // Cyan
+        test_hsl_to_rgb(180, 1.0, 0.5, 0x00FFFF, "Cyan");
     }
 
     #[test]
     fn test_hsl_to_rgb_magenta() {
-        assert_eq!(hsl_to_rgb(300, 1.0, 0.5),  0xFF00FF);  // Magenta
+        test_hsl_to_rgb(300, 1.0, 0.5, 0xFF00FF, "Magenta");
     }
 
     #[test]
     fn test_hsl_to_rgb_silver() {
-        assert_eq!(hsl_to_rgb(0,   0.0, 0.75), 0xC0C0C0);  // Silver
+        test_hsl_to_rgb(0, 0.0, 0.75, 0xBFBFBF, "Silver");
     }
 
     #[test]
     fn test_hsl_to_rgb_gray() {
-        assert_eq!(hsl_to_rgb(0,   0.0, 0.5),  0x808080);  // Gray
+        test_hsl_to_rgb(0, 0.0, 0.5, 0x808080, "Gray");
     }
 
     #[test]
     fn test_hsl_to_rgb_maroon() {
-        assert_eq!(hsl_to_rgb(0,   1.0, 0.25), 0x800000);  // Maroon
+        test_hsl_to_rgb(0, 1.0, 0.25, 0x800000, "Maroon");
     }
 
     #[test]
     fn test_hsl_to_rgb_olive() {
-        assert_eq!(hsl_to_rgb(60,  1.0, 0.25), 0x808000);  // Olive
+        test_hsl_to_rgb(60, 1.0, 0.25, 0x808000, "Olive");
     }
 
     #[test]
     fn test_hsl_to_rgb_green() {
-        assert_eq!(hsl_to_rgb(120, 1.0, 0.25), 0x008000);  // Green
+        test_hsl_to_rgb(120, 1.0, 0.25, 0x008000, "Green");
     }
 
     #[test]
     fn test_hsl_to_rgb_purple() {
-        assert_eq!(hsl_to_rgb(300, 1.0, 0.25), 0x800080);  // Purple
+        test_hsl_to_rgb(300, 1.0, 0.25, 0x800080, "Purple");
     }
 
     #[test]
     fn test_hsl_to_rgb_teal() {
-        assert_eq!(hsl_to_rgb(180, 1.0, 0.25), 0x008080);  // Teal
+        test_hsl_to_rgb(180, 1.0, 0.25, 0x008080, "Teal");
     }
 
     #[test]
     fn test_hsl_to_rgb_navy() {
-        assert_eq!(hsl_to_rgb(240, 1.0, 0.5),  0x000080);  // Navy
+        test_hsl_to_rgb(240, 1.0, 0.25, 0x000080, "Navy");
     }
 }
