@@ -1,9 +1,11 @@
 extern crate minifb;
 
 use minifb::{Key, WindowOptions, Window};
+use std::f64;
+use std::cmp;
 
-const WIDTH: usize = 360;
-const HEIGHT: usize = 100;
+const WIDTH: usize = 640;
+const HEIGHT: usize = 480;
 
 fn hsl_to_rgb(h: i32, s: f64, l: f64) -> u32 {
     //println!("h: {}, s: {}, l: {}", h, s, l);
@@ -27,6 +29,18 @@ fn hsl_to_rgb(h: i32, s: f64, l: f64) -> u32 {
     b.round() as u32 + ((g.round() as u32) << 8) + ((r.round() as u32) << 16)
 }
 
+fn distance_from_center(x: i32, y: i32, center_x: i32, center_y: i32) -> f64 {
+    return (((x - center_x) * (x - center_x) + (y - center_y) * (y - center_y)) as f64).sqrt()
+}
+
+fn angle_from_center(x: i32, y: i32, center_x: i32, center_y: i32) -> f64 {
+    let mut angle = ((y - center_y) as f64).atan2((x - center_x) as f64) * 180.0 / f64::consts::PI;
+    if angle < 0.0 {
+        angle = angle + 360.0;
+    }
+    return angle
+}
+
 fn main() {
     let mut buffer: Vec<u32> = vec![0; WIDTH * HEIGHT];
 
@@ -37,17 +51,29 @@ fn main() {
         panic!("{}", e);
     });
 
+    let mut time: i32 = 0;
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let s: f64 = 1.0;
+        let (center_x, center_y) = ((WIDTH / 2) as i32, (HEIGHT / 2) as i32);
+        let (radius_min, radius_max) = (0.35 * cmp::min(WIDTH, HEIGHT) as f64,
+                                        0.4 * cmp::min(WIDTH, HEIGHT) as f64);
         
-        for h in 0..WIDTH {
-            for l in 0..HEIGHT {
-                buffer[h + l * WIDTH] = hsl_to_rgb(h as i32, s, l as f64 / 100.0);
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                let distance = distance_from_center(x as i32, y as i32, center_x, center_y);
+                let angle = (angle_from_center(x as i32, y as i32, center_x, center_y) as i32 + time) % 360;
+
+                if distance > radius_min && distance < radius_max {
+                    buffer[x + y * WIDTH] = hsl_to_rgb(angle, s, 0.5);
+                } else {
+                    buffer[x + y * WIDTH] = 0;
+                }
             }
         }
 
         // We unwrap here as we want this code to exit if it fails. Real applications may want to handle this in a different way
         window.update_with_buffer(&buffer).unwrap();
+        time += 10;
     }
 }
 
@@ -66,6 +92,19 @@ mod tests {
     fn test_hsl_to_rgb(h: i32, s: f64, l: f64, expected: u32, name: &str) {
         let computed = hsl_to_rgb(h, s, l);
         assert_eq!(computed, expected, "HSL to RGB conversion failed: {}. Got {:06X}, expected {:06X}", name, computed, expected);
+    }
+
+    #[test]
+    fn test_angle_from_center() {
+        assert_eq!(angle_from_center(2, 2, 1, 1), 45.0);
+        assert_eq!(angle_from_center(0, 2, 1, 1), 135.0);
+        assert_eq!(angle_from_center(0, 0, 1, 1), 225.0);
+        assert_eq!(angle_from_center(2, 0, 1, 1), 315.0);
+    }
+
+    #[test]
+    fn test_distance_from_center() {
+        assert_eq!(distance_from_center(6, 7, 3, 3), 5.0);
     }
 
     // Test cases from https://www.rapidtables.com/convert/color/hsl-to-rgb.html
